@@ -1,5 +1,6 @@
 """EntityRosterUpdate node: maintains character canon and alias registry."""
 
+import os
 import json
 from typing import Any
 from schemas.state import BookState, CharacterProfile, UnresolvedAliasOccurrence
@@ -39,8 +40,12 @@ def entity_roster_update_node(state: BookState) -> BookState:
     # Build prompt for LLM
     prompt = get_entity_roster_prompt(chapter_text, existing_characters, scenes)
     
+    # Get model configuration from environment
+    model = os.getenv("ENTITY_ROSTER_MODEL") or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    temperature = float(os.getenv("ENTITY_ROSTER_TEMPERATURE", "0.1"))
+    
     # Call LLM for character detection
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)
+    llm = ChatOpenAI(model=model, temperature=temperature)
     response = llm.invoke([HumanMessage(content=prompt)])
     response_text = response.content
     

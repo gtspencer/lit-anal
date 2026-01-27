@@ -1,5 +1,6 @@
 """InfluenceExtractor node: extracts structured influence evidence per character."""
 
+import os
 from schemas.state import BookState, InfluenceEvidence
 from utils.json import parse_json_safely
 from prompts import get_influence_extraction_prompt
@@ -31,8 +32,12 @@ def influence_extractor_node(state: BookState) -> BookState:
     # Build prompt for LLM
     prompt = get_influence_extraction_prompt(scenes, characters)
     
+    # Get model configuration from environment
+    model = os.getenv("INFLUENCE_EXTRACTOR_MODEL") or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    temperature = float(os.getenv("INFLUENCE_EXTRACTOR_TEMPERATURE", "0.2"))
+    
     # Call LLM for influence extraction
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
+    llm = ChatOpenAI(model=model, temperature=temperature)
     response = llm.invoke([HumanMessage(content=prompt)])
     response_text = response.content
     

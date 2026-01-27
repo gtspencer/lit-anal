@@ -1,11 +1,12 @@
 """Ranker node: assigns subjective influence ranks to all characters."""
 
+import os
+import hashlib
 from schemas.state import BookState, FinalCharacterResult
 from utils.json import parse_json_safely
 from prompts import get_ranker_prompt, PROMPT_VERSION
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
-import hashlib
 
 
 def ranker_node(state: BookState) -> BookState:
@@ -42,9 +43,11 @@ def ranker_node(state: BookState) -> BookState:
         book_appearances
     )
     
+    # Get model configuration from environment
+    model = os.getenv("RANKER_MODEL") or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    temperature = float(os.getenv("RANKER_TEMPERATURE", "0.1"))  # Low temperature for more stable rankings
+    
     # Call LLM
-    model = "gpt-4o-mini"
-    temperature = 0.1  # Low temperature for more stable rankings
     llm = ChatOpenAI(model=model, temperature=temperature)
     response = llm.invoke([HumanMessage(content=prompt)])
     response_text = response.content

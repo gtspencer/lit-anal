@@ -1,11 +1,12 @@
 """BookSynthesis node: compresses book-wide evidence into dossiers."""
 
+import os
+import hashlib
 from schemas.state import BookState, CharacterDossier
 from utils.json import parse_json_safely
 from prompts import get_book_synthesis_prompt, PROMPT_VERSION
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
-import hashlib
 
 
 def book_synthesis_node(state: BookState) -> BookState:
@@ -41,9 +42,11 @@ def book_synthesis_node(state: BookState) -> BookState:
         characters_by_id
     )
     
+    # Get model configuration from environment
+    model = os.getenv("BOOK_SYNTHESIS_MODEL") or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    temperature = float(os.getenv("BOOK_SYNTHESIS_TEMPERATURE", "0.2"))
+    
     # Call LLM
-    model = "gpt-4o-mini"
-    temperature = 0.2
     llm = ChatOpenAI(model=model, temperature=temperature)
     response = llm.invoke([HumanMessage(content=prompt)])
     response_text = response.content
