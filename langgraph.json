@@ -1,0 +1,10 @@
+{
+  "graphs": {
+    "book_analyzer": "./graph.py:get_app"
+  },
+  "dependencies": [
+    "./requirements.txt"
+  ],
+  "env": ".env"
+}
+

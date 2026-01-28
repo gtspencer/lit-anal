@@ -34,6 +34,10 @@ def find_all_alias_matches(
 ) -> dict[str, List[Tuple[int, int]]]:
     """Find all alias matches in text, grouped by character ID.
     
+    Only counts unambiguous aliases (aliases that map to a single character).
+    Ambiguous aliases are skipped to avoid false positives where multiple
+    characters are incorrectly counted as appearing/mentioned.
+    
     Args:
         text: Text to search
         alias_index: Maps alias -> set of char_ids
@@ -45,9 +49,15 @@ def find_all_alias_matches(
     results = defaultdict(list)
     
     for alias, char_ids in alias_index.items():
-        matches = find_alias_matches(text, alias, case_sensitive)
-        for char_id in char_ids:
+        # Only process unambiguous aliases to avoid false positives
+        # When an alias maps to multiple characters, we can't determine
+        # which character was actually mentioned, so we skip it
+        if len(char_ids) == 1:
+            char_id = next(iter(char_ids))
+            matches = find_alias_matches(text, alias, case_sensitive)
             results[char_id].extend(matches)
+        # Ambiguous aliases are skipped - they would incorrectly inflate
+        # both mention counts and appearance counts for all mapped characters
     
     return dict(results)
 

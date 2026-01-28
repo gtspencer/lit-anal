@@ -7,6 +7,9 @@ from utils.json import parse_json_safely
 from prompts import get_ranker_prompt, PROMPT_VERSION
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
+from utils.logging_config import get_logger
+
+logger = get_logger()
 
 
 def ranker_node(state: BookState) -> BookState:
@@ -35,6 +38,9 @@ def ranker_node(state: BookState) -> BookState:
     book_appearances = state.get('book_appearances', {})
     characters_by_id = state.get('characters_by_id', {})
     
+    logger.info("Ranking characters by influence")
+    logger.debug(f"Ranking {len(character_dossiers)} characters based on dossiers and plot summary")
+    
     # Build prompt
     prompt = get_ranker_prompt(
         book_plot_summary,
@@ -47,10 +53,12 @@ def ranker_node(state: BookState) -> BookState:
     model = os.getenv("RANKER_MODEL") or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
     temperature = float(os.getenv("RANKER_TEMPERATURE", "0.1"))  # Low temperature for more stable rankings
     
+    logger.debug(f"Calling LLM (model: {model}, temperature: {temperature})")
     # Call LLM
     llm = ChatOpenAI(model=model, temperature=temperature)
     response = llm.invoke([HumanMessage(content=prompt)])
     response_text = response.content
+    logger.debug("LLM response received")
     
     # Parse JSON response
     parsed = parse_json_safely(response_text)
@@ -76,9 +84,16 @@ def ranker_node(state: BookState) -> BookState:
                 result['ranking_rationale'] = rank_data.get('ranking_rationale')
             
             final_ranked_characters.append(result)
+    else:
+        logger.error("Failed to parse ranking response from LLM")
     
     # Sort by rank to ensure correct ordering
     final_ranked_characters.sort(key=lambda x: x['rank'])
+    logger.info(f"Ranking complete: {len(final_ranked_characters)} characters ranked")
+    if final_ranked_characters:
+        top_3 = final_ranked_characters[:3]
+        top_3_str = ', '.join([f"{c['rank']}. {c['name']}" for c in top_3])
+        logger.info(f"Top 3: {top_3_str}")
     
     # Update metadata
     prompt_hash = hashlib.sha256(prompt.encode()).hexdigest()[:8]

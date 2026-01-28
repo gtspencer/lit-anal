@@ -125,6 +125,29 @@ Specify run metadata for tracing:
 python main.py --input chapters.json --output results.json --book-id "book_001" --run-id "run_001" --env prod
 ```
 
+**Logging Options:**
+
+By default, logs are output to the command line (stdout). You can also write logs to a file:
+
+```bash
+# Log to both console and file
+python main.py --input chapters.json --output results.json --log-file run.log
+
+# Set log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+python main.py --input chapters.json --output results.json --log-file run.log --log-level DEBUG
+```
+
+**Logging Behavior:**
+- **Without `--log-file`**: Logs only go to the command line (stdout)
+- **With `--log-file`**: Logs go to **both** the command line and the specified file
+- **Log levels**: Control verbosity (default: INFO)
+  - `DEBUG`: Detailed information including character IDs, counts, model configs
+  - `INFO`: Progress updates, major milestones, summaries
+  - `WARNING`: Ambiguous references, parsing issues
+  - `ERROR`: Failures, missing data
+
+All nodes log their execution steps, making it easy to track progress and debug issues.
+
 ## Architecture
 
 ### Graph Nodes

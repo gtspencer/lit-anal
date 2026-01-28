@@ -16,7 +16,7 @@ from nodes.mention_counter import mention_counter_node
 from nodes.appearance_counter import appearance_counter_node
 from nodes.influence_extractor import influence_extractor_node
 from nodes.book_aggregator import book_aggregator_node
-from nodes.next_chapter import next_chapter_node
+from nodes.next_chapter import next_chapter_node, should_continue
 from nodes.book_synthesis import book_synthesis_node
 from nodes.ranker import ranker_node
 
@@ -59,7 +59,7 @@ def create_graph() -> StateGraph:
     # Conditional routing from next_chapter
     workflow.add_conditional_edges(
         "next_chapter",
-        next_chapter_node,
+        should_continue,
         {
             "next_chapter": "load_chapter",
             "finalize": "book_synthesis",

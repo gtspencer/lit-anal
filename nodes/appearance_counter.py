@@ -3,6 +3,9 @@
 from collections import defaultdict
 from schemas.state import BookState
 from utils.aliases import find_all_alias_matches
+from utils.logging_config import get_logger
+
+logger = get_logger()
 
 
 def appearance_counter_node(state: BookState) -> BookState:
@@ -22,7 +25,10 @@ def appearance_counter_node(state: BookState) -> BookState:
         Updated state with appearance counts
     """
     scenes = state['current_scenes']
+    chapter_id = state['current_chapter_id']
     alias_index = state.get('alias_index', {})
+    
+    logger.info(f"Counting appearances in chapter {chapter_id} ({len(scenes)} scenes)")
     
     # For each scene, determine which characters appear
     characters_in_scenes = defaultdict(set)
@@ -40,6 +46,11 @@ def appearance_counter_node(state: BookState) -> BookState:
         char_id: len(scene_ids)
         for char_id, scene_ids in characters_in_scenes.items()
     }
+    
+    logger.info(f"Characters appeared in {len(chapter_appearances)} characters across scenes")
+    if chapter_appearances:
+        top_appeared = max(chapter_appearances.items(), key=lambda x: x[1])
+        logger.debug(f"Most appearances: {top_appeared[0]} in {top_appeared[1]} scenes")
     
     updated_state: BookState = {
         **state,

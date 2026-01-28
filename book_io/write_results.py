@@ -4,6 +4,9 @@ import json
 from pathlib import Path
 from typing import Dict, Any
 from schemas.state import BookState, FinalCharacterResult
+from utils.logging_config import get_logger
+
+logger = get_logger()
 
 
 def write_results_json(
@@ -34,7 +37,9 @@ def write_results_json(
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(output_data, f, indent=2, ensure_ascii=False)
     
-    print(f"Results written to {output_path}")
+    logger.info(f"Results written to {output_path}")
+    if include_metadata:
+        logger.debug(f"Output includes metadata: {len(state.get('ranking_run_metadata', {}))} fields")
 
 
 def write_full_state_json(state: BookState, output_path: str) -> None:
@@ -66,5 +71,6 @@ def write_full_state_json(state: BookState, output_path: str) -> None:
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(serializable_state, f, indent=2, ensure_ascii=False, default=str)
     
-    print(f"Full state written to {output_path}")
+    logger.info(f"Full state written to {output_path}")
+    logger.debug(f"State contains {len(serializable_state)} top-level fields")
 

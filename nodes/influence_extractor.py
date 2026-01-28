@@ -6,6 +6,9 @@ from utils.json import parse_json_safely
 from prompts import get_influence_extraction_prompt
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
+from utils.logging_config import get_logger
+
+logger = get_logger()
 
 
 def influence_extractor_node(state: BookState) -> BookState:
@@ -29,6 +32,9 @@ def influence_extractor_node(state: BookState) -> BookState:
     characters = state.get('characters_by_id', {})
     chapter_id = state['current_chapter_id']
     
+    logger.info(f"Extracting influence evidence for chapter {chapter_id}")
+    logger.debug(f"Analyzing {len(scenes)} scenes for {len(characters)} characters")
+    
     # Build prompt for LLM
     prompt = get_influence_extraction_prompt(scenes, characters)
     
@@ -36,10 +42,12 @@ def influence_extractor_node(state: BookState) -> BookState:
     model = os.getenv("INFLUENCE_EXTRACTOR_MODEL") or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
     temperature = float(os.getenv("INFLUENCE_EXTRACTOR_TEMPERATURE", "0.2"))
     
+    logger.debug(f"Calling LLM (model: {model}, temperature: {temperature})")
     # Call LLM for influence extraction
     llm = ChatOpenAI(model=model, temperature=temperature)
     response = llm.invoke([HumanMessage(content=prompt)])
     response_text = response.content
+    logger.debug("LLM response received")
     
     # Parse JSON response
     parsed = parse_json_safely(response_text)
@@ -65,6 +73,16 @@ def influence_extractor_node(state: BookState) -> BookState:
                 evidence['salience_score'] = float(evidence_data['salience_score'])
             
             chapter_evidence[char_id] = evidence
+            
+            # Log evidence summary
+            signal_counts = {k: len(v) for k, v in signals.items()}
+            total_signals = sum(signal_counts.values())
+            char_name = characters.get(char_id, {}).get('canonical_name', 'Unknown') if char_id in characters else 'Unknown'
+            logger.debug(f"Character {char_id} ({char_name}): {total_signals} influence signals ({signal_counts})")
+    else:
+        logger.warning("Failed to parse influence evidence from LLM response")
+    
+    logger.info(f"Extracted influence evidence for {len(chapter_evidence)} characters")
     
     updated_state: BookState = {
         **state,

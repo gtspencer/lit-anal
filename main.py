@@ -9,15 +9,20 @@ CLI usage:
 import argparse
 import uuid
 from pathlib import Path
+from dotenv import load_dotenv
 from graph import get_app
-from io.load_chapters import (
+from book_io.load_chapters import (
     load_chapters_from_json,
     load_chapters_from_directory,
     load_chapters_from_single_file,
 )
-from io.write_results import write_results_json, write_full_state_json
+from book_io.write_results import write_results_json, write_full_state_json
 from observability.langsmith import invoke_with_tracing, build_run_metadata, build_tags
 from schemas.state import BookState
+from utils.logging_config import setup_logging, get_logger
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 def main():
@@ -79,21 +84,39 @@ def main():
         default="dev",
         help="Environment (dev/prod)"
     )
+    parser.add_argument(
+        "--log-file",
+        type=str,
+        help="Optional: path to log file (logs also go to console)"
+    )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Logging level (default: INFO)"
+    )
     
     args = parser.parse_args()
     
+    # Set up logging
+    logger = setup_logging(log_file=args.log_file, log_level=args.log_level)
+    
     # Load chapters
-    print("Loading chapters...")
+    logger.info("Loading chapters...")
     if args.input:
+        logger.debug(f"Loading from JSON file: {args.input}")
         chapters = load_chapters_from_json(args.input)
     elif args.input_dir:
+        logger.debug(f"Loading from directory: {args.input_dir}")
         chapters = load_chapters_from_directory(args.input_dir)
     elif args.input_file:
+        logger.debug(f"Loading from single file: {args.input_file}")
         chapters = load_chapters_from_single_file(args.input_file)
     else:
         raise ValueError("Must provide --input, --input-dir, or --input-file")
     
-    print(f"Loaded {len(chapters)} chapters")
+    logger.info(f"Loaded {len(chapters)} chapters")
     
     # Initialize state
     initial_state: BookState = {
@@ -127,18 +150,20 @@ def main():
     )
     
     # Execute graph
-    print("Executing graph...")
+    logger.info("Executing graph...")
+    logger.debug(f"Run ID: {run_id}, Book ID: {book_id}")
     final_state = invoke_with_tracing(
         app,
         initial_state,
         run_meta=run_meta,
         tags=tags,
+        thread_id=run_id,  # Use run_id as thread_id for grouping in LangSmith
     )
     
-    print("Graph execution complete")
+    logger.info("Graph execution complete")
     
     # Write results
-    print("Writing results...")
+    logger.info(f"Writing results to {args.output}...")
     write_results_json(
         final_state,
         args.output,
@@ -146,15 +171,16 @@ def main():
     )
     
     if args.full_state:
+        logger.info(f"Writing full state to {args.full_state}...")
         write_full_state_json(final_state, args.full_state)
     
     # Print summary
     ranked = final_state.get('final_ranked_characters', [])
-    print(f"\nRanked {len(ranked)} characters")
-    print("\nTop 5 characters by influence:")
+    logger.info(f"Ranked {len(ranked)} characters")
+    logger.info("Top 5 characters by influence:")
     for char in ranked[:5]:
-        print(f"  {char['rank']}. {char['name']} (ID: {char['character_id']})")
-        print(f"     Appeared in {char['appeared_scenes']} scenes, mentioned {char['mentioned_count']} times")
+        logger.info(f"  {char['rank']}. {char['name']} (ID: {char['character_id']})")
+        logger.info(f"     Appeared in {char['appeared_scenes']} scenes, mentioned {char['mentioned_count']} times")
 
 
 if __name__ == "__main__":

@@ -6,7 +6,14 @@ tracing, tagging, and metadata collection for all runs.
 
 import os
 from typing import Any, Optional, Dict
-from langgraph.graph import CompiledGraph
+
+# Try to import CompiledGraph, but use Any as fallback for compatibility
+try:
+    from langgraph.graph import CompiledGraph
+except ImportError:
+    # CompiledGraph may not exist in all LangGraph versions
+    # Use Any as type hint fallback
+    CompiledGraph = Any
 
 
 def invoke_with_tracing(
@@ -16,6 +23,7 @@ def invoke_with_tracing(
     project_name: Optional[str] = None,
     tags: Optional[list[str]] = None,
     extra_metadata: Optional[Dict[str, Any]] = None,
+    thread_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Invoke LangGraph app with LangSmith tracing enabled.
     
@@ -26,19 +34,33 @@ def invoke_with_tracing(
         project_name: LangSmith project name (defaults to env var or "book-influence-dev")
         tags: Additional tags to attach (e.g., ["book:book_001", "run:run_001"])
         extra_metadata: Additional metadata to attach
+        thread_id: Thread ID for grouping related runs in LangSmith (defaults to run_id from run_meta)
     
     Returns:
         Graph execution result
     """
+    # Calculate recursion limit based on number of chapters
+    # Each chapter requires one loop iteration, plus buffer for init/finalization
+    num_chapters = len(inputs.get('chapters', []))
+    if num_chapters > 0:
+        # Set limit to 2x number of chapters to be safe
+        # (accounts for init, finalization, and some buffer)
+        recursion_limit = num_chapters * 2
+    else:
+        # Default fallback if chapters not in inputs
+        recursion_limit = int(os.getenv("LANGSMITH_RECURSION_LIMIT", "100"))
+    
     # Check if tracing is enabled
     tracing_enabled = os.getenv("LANGSMITH_TRACING", "false").lower() == "true"
     
-    if not tracing_enabled:
-        # If tracing disabled, just invoke normally
-        return app.invoke(inputs)
+    # Build config with recursion limit (always set, even if tracing disabled)
+    config = {
+        "recursion_limit": recursion_limit
+    }
     
-    # Build config with tags and metadata
-    config = {}
+    if not tracing_enabled:
+        # If tracing disabled, just invoke with recursion limit
+        return app.invoke(inputs, config=config)
     
     # Set project name
     if project_name:
@@ -47,6 +69,13 @@ def invoke_with_tracing(
         config["langsmith_project"] = os.getenv("LANGSMITH_PROJECT")
     else:
         config["langsmith_project"] = "book-influence-dev"
+    
+    # Add thread_id for grouping runs in LangSmith
+    if thread_id:
+        config["thread_id"] = thread_id
+    elif run_meta and run_meta.get("run_id"):
+        # Auto-generate thread_id from run_id if not explicitly provided
+        config["thread_id"] = run_meta["run_id"]
     
     # Add tags
     if tags:
@@ -64,7 +93,7 @@ def invoke_with_tracing(
     if metadata:
         config["metadata"] = metadata
     
-    # Invoke with config
+    # Recursion limit already set above, so invoke with full config
     return app.invoke(inputs, config=config)
 
 

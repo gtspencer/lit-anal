@@ -2,6 +2,9 @@
 
 from typing import TypedDict
 from schemas.state import BookState
+from utils.logging_config import get_logger
+
+logger = get_logger()
 
 
 def init_node(state: BookState) -> BookState:
@@ -20,15 +23,25 @@ def init_node(state: BookState) -> BookState:
     Returns:
         Updated state with initialized structures
     """
+    logger.info("Initializing and validating input state")
+    
     # Validate chapters
     if 'chapters' not in state or not state['chapters']:
+        logger.error("State must contain a non-empty 'chapters' list")
         raise ValueError("State must contain a non-empty 'chapters' list")
+    
+    num_chapters = len(state['chapters'])
+    logger.debug(f"Validating {num_chapters} chapters")
     
     for i, chapter in enumerate(state['chapters']):
         if 'chapter_id' not in chapter or 'text' not in chapter:
+            logger.error(f"Chapter {i} missing required fields")
             raise ValueError(f"Chapter {i} must have 'chapter_id' and 'text' fields")
         if not isinstance(chapter['text'], str) or not chapter['text'].strip():
+            logger.error(f"Chapter {i} has empty text field")
             raise ValueError(f"Chapter {i} must have non-empty 'text' field")
+    
+    logger.info(f"Validated {num_chapters} chapters successfully")
     
     # Initialize state structures
     updated_state: BookState = {
@@ -42,5 +55,6 @@ def init_node(state: BookState) -> BookState:
         'book_influence': state.get('book_influence', {}),
     }
     
+    logger.debug("State structures initialized")
     return updated_state
 
