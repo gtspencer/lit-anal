@@ -11,6 +11,9 @@ This system tracks:
 
 After processing all chapters, the system synthesizes book-wide dossiers and produces a subjective influence ranking based on narrative impact, not just frequency.
 
+## Inspiration
+This initially started as a static analyzer meant to count character reference in Game of Thrones, with the goal of determining who has "the best story", and thus deserves the iron throne.  With the advent of powerful LLMs and agentic workflows, I've modified the approach to take advantage of the non-deterministic, subjective nature of LLMs to further apply "importance" metrics to characters in any book.
+
 ## Features
 
 - Chapter-by-chapter processing with LangGraph state machine
