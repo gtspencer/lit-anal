@@ -12,10 +12,10 @@ logger = get_logger()
 
 
 def influence_extractor_node(state: BookState) -> BookState:
-    """Extract structured influence evidence per character for current chapter.
+    """Extract structured influence evidence per character for current scene chunk.
     
     Reads:
-    - `current_scenes`: list of scenes
+    - `current_scene_chunk`: current batch of scenes being processed
     - `characters_by_id`: character profiles
     - `current_chapter_id`: current chapter ID
     
@@ -28,15 +28,15 @@ def influence_extractor_node(state: BookState) -> BookState:
     Returns:
         Updated state with influence evidence extracted
     """
-    scenes = state['current_scenes']
+    scene_chunk = state.get('current_scene_chunk', [])
     characters = state.get('characters_by_id', {})
     chapter_id = state['current_chapter_id']
     
     logger.info(f"Extracting influence evidence for chapter {chapter_id}")
-    logger.debug(f"Analyzing {len(scenes)} scenes for {len(characters)} characters")
+    logger.debug(f"Analyzing {len(scene_chunk)} scenes in chunk for {len(characters)} characters")
     
-    # Build prompt for LLM
-    prompt = get_influence_extraction_prompt(scenes, characters)
+    # Build prompt for LLM using scene chunk (all scenes, no truncation)
+    prompt = get_influence_extraction_prompt(scene_chunk, characters)
     
     # Get model configuration from environment
     model = os.getenv("INFLUENCE_EXTRACTOR_MODEL") or os.getenv("OPENAI_MODEL", "gpt-4o-mini")

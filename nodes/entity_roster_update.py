@@ -15,11 +15,10 @@ logger = get_logger()
 
 
 def entity_roster_update_node(state: BookState) -> BookState:
-    """Update character roster and alias index for current chapter.
+    """Update character roster and alias index for current scene chunk.
     
     Reads:
-    - `current_chapter_text`: text of current chapter
-    - `current_scenes`: list of scenes
+    - `current_scene_chunk`: current batch of scenes being processed
     - `characters_by_id`: existing character profiles
     - `alias_index`: existing alias index
     
@@ -34,20 +33,18 @@ def entity_roster_update_node(state: BookState) -> BookState:
     Returns:
         Updated state with character roster updated
     """
-    chapter_text = state['current_chapter_text']
     chapter_id = state['current_chapter_id']
-    scenes = state['current_scenes']
+    scene_chunk = state.get('current_scene_chunk', [])
     existing_characters = state.get('characters_by_id', {})
     existing_alias_index = state.get('alias_index', {})
     
-    chapter_id = state['current_chapter_id']
     num_existing = len(existing_characters)
     
     logger.info(f"Updating entity roster for chapter {chapter_id}")
-    logger.debug(f"Existing characters: {num_existing}, Scenes: {len(scenes)}")
+    logger.debug(f"Existing characters: {num_existing}, Scene chunk: {len(scene_chunk)} scenes")
     
-    # Build prompt for LLM
-    prompt = get_entity_roster_prompt(chapter_text, existing_characters, scenes)
+    # Build prompt for LLM using scene chunk
+    prompt = get_entity_roster_prompt(existing_characters, scene_chunk)
     
     # Get model configuration from environment
     model = os.getenv("ENTITY_ROSTER_MODEL") or os.getenv("OPENAI_MODEL", "gpt-4o-mini")

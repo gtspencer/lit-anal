@@ -19,7 +19,6 @@ def ranker_node(state: BookState) -> BookState:
     - `book_plot_summary`: overall plot summary
     - `character_dossiers`: character dossiers
     - `book_mentions`: mention counts (reference only)
-    - `book_appearances`: appearance counts (reference only)
     - `characters_by_id`: character profiles
     
     Writes:
@@ -35,7 +34,6 @@ def ranker_node(state: BookState) -> BookState:
     book_plot_summary = state.get('book_plot_summary', '')
     character_dossiers = state.get('character_dossiers', {})
     book_mentions = state.get('book_mentions', {})
-    book_appearances = state.get('book_appearances', {})
     characters_by_id = state.get('characters_by_id', {})
     
     logger.info("Ranking characters by influence")
@@ -45,8 +43,7 @@ def ranker_node(state: BookState) -> BookState:
     prompt = get_ranker_prompt(
         book_plot_summary,
         character_dossiers,
-        book_mentions,
-        book_appearances
+        book_mentions
     )
     
     # Get model configuration from environment
@@ -75,7 +72,6 @@ def ranker_node(state: BookState) -> BookState:
                 'character_id': char_id,
                 'name': rank_data.get('name', char.get('canonical_name', 'Unknown')),
                 'aliases': rank_data.get('aliases', char.get('aliases', [])),
-                'appeared_scenes': int(rank_data.get('appeared_scenes', book_appearances.get(char_id, 0))),
                 'mentioned_count': int(rank_data.get('mentioned_count', book_mentions.get(char_id, 0))),
                 'influence_summary': rank_data.get('influence_summary', ''),
             }

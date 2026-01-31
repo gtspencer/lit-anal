@@ -126,8 +126,8 @@ def main():
         'alias_index': {},
         'unresolved_aliases': {},
         'book_mentions': {},
-        'book_appearances': {},
         'book_influence': {},
+        'chapter_summaries': {},
     }
     
     # Get graph app
@@ -180,7 +180,7 @@ def main():
     logger.info("Top 5 characters by influence:")
     for char in ranked[:5]:
         logger.info(f"  {char['rank']}. {char['name']} (ID: {char['character_id']})")
-        logger.info(f"     Appeared in {char['appeared_scenes']} scenes, mentioned {char['mentioned_count']} times")
+        logger.info(f"     Mentioned {char['mentioned_count']} times")
 
 
 if __name__ == "__main__":
