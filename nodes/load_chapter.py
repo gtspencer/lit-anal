@@ -44,8 +44,9 @@ def load_chapter_node(state: BookState) -> BookState:
         'current_chapter_text': current_chapter['text'],
         # Reset per-chapter scratch fields
         'current_scenes': [],
+        'current_scene_chunk': [],
+        'processed_scene_ids': set(),
         'chapter_mentions_by_char': {},
-        'chapter_appearances_by_char': {},
         'chapter_influence_evidence': {},
     }
     

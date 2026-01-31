@@ -51,8 +51,8 @@ def init_node(state: BookState) -> BookState:
         'alias_index': state.get('alias_index', {}),
         'unresolved_aliases': state.get('unresolved_aliases', {}),
         'book_mentions': state.get('book_mentions', {}),
-        'book_appearances': state.get('book_appearances', {}),
         'book_influence': state.get('book_influence', {}),
+        'chapter_summaries': state.get('chapter_summaries', {}),
     }
     
     logger.debug("State structures initialized")

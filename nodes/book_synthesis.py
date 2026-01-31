@@ -18,8 +18,8 @@ def book_synthesis_node(state: BookState) -> BookState:
     Reads:
     - `book_influence`: accumulated influence evidence
     - `book_mentions`: total mentions per character
-    - `book_appearances`: total appearances per character
     - `characters_by_id`: all character profiles
+    - `chapter_summaries`: chapter summaries for narrative context
     
     Writes:
     - `book_plot_summary`: overall plot summary
@@ -34,18 +34,19 @@ def book_synthesis_node(state: BookState) -> BookState:
     """
     book_influence = state.get('book_influence', {})
     book_mentions = state.get('book_mentions', {})
-    book_appearances = state.get('book_appearances', {})
     characters_by_id = state.get('characters_by_id', {})
+    chapter_summaries = state.get('chapter_summaries', {})
     
     logger.info("Synthesizing book-wide evidence into character dossiers")
     logger.debug(f"Processing {len(characters_by_id)} characters with {len(book_influence)} influence records")
+    logger.debug(f"Using {len(chapter_summaries)} chapter summaries for context")
     
     # Build prompt
     prompt = get_book_synthesis_prompt(
         book_influence,
         book_mentions,
-        book_appearances,
-        characters_by_id
+        characters_by_id,
+        chapter_summaries
     )
     
     # Get model configuration from environment

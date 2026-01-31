@@ -6,8 +6,8 @@ A LangGraph-based system that processes books chapter-by-chapter to analyze and 
 
 This system tracks:
 - **Mentioned count**: Total times a character's name or aliases appear in the text
-- **Appeared scenes**: Number of scenes in which a character appears (binary per scene)
 - **Influence evidence**: Structured evidence of causal, social, world, pacing, and narrative gravity impact
+- **Chapter summaries**: Incremental summaries of each chapter for narrative context
 
 After processing all chapters, the system synthesizes book-wide dossiers and produces a subjective influence ranking based on narrative impact, not just frequency.
 
@@ -17,9 +17,11 @@ This initially started as a static analyzer meant to count character reference i
 ## Features
 
 - Chapter-by-chapter processing with LangGraph state machine
+- Scene-based processing (chunks full scenes, never truncates)
 - Automatic character detection and alias resolution
-- Scene segmentation and appearance tracking
+- Scene segmentation and intelligent chunking
 - Structured influence evidence extraction
+- Incremental chapter summarization for narrative context
 - Book-wide synthesis into character dossiers
 - Subjective influence ranking (not based on frequency)
 - LangSmith integration for tracing and debugging
@@ -45,6 +47,7 @@ Required environment variables:
 - `LANGSMITH_API_KEY`: Your LangSmith API key (optional, for tracing)
 - `LANGSMITH_TRACING`: Set to `true` to enable tracing (default: `false`)
 - `LANGSMITH_PROJECT`: LangSmith project name (default: `book-influence-dev`)
+- `SCENE_CHUNK_MAX_CHARS`: Maximum characters per scene chunk (default: `5000`)
 
 ## Usage
 
@@ -103,7 +106,6 @@ The output JSON contains an array of ranked characters:
     "character_id": "char_001",
     "name": "Character Name",
     "aliases": ["Alias1", "Alias2"],
-    "appeared_scenes": 42,
     "mentioned_count": 310,
     "influence_summary": "Summary of their influence...",
     "ranking_rationale": "Why this character ranks here..."
@@ -160,12 +162,14 @@ graph TD
     Start([Start]) --> Init[Init]
     Init --> LoadChapter[LoadChapter]
     LoadChapter --> SceneSegmenter[SceneSegmenter]
-    SceneSegmenter --> EntityRosterUpdate[EntityRosterUpdate]
+    SceneSegmenter --> SceneChunker[SceneChunker]
+    SceneChunker --> EntityRosterUpdate[EntityRosterUpdate]
     EntityRosterUpdate --> MentionCounter[MentionCounter]
-    MentionCounter --> AppearanceCounter[AppearanceCounter]
-    AppearanceCounter --> InfluenceExtractor[InfluenceExtractor]
-    InfluenceExtractor --> BookAggregator[BookAggregator]
+    MentionCounter --> InfluenceExtractor[InfluenceExtractor]
+    InfluenceExtractor --> ChapterSummarizer[ChapterSummarizer]
+    ChapterSummarizer --> BookAggregator[BookAggregator]
     BookAggregator --> NextChapter[NextChapter]
+    NextChapter -->|next_chunk| SceneChunker
     NextChapter -->|next_chapter| LoadChapter
     NextChapter -->|finalize| BookSynthesis[BookSynthesis]
     BookSynthesis --> Ranker[Ranker]
@@ -184,20 +188,21 @@ graph TD
 1. **Init**: Validates input and initializes state
 2. **LoadChapter**: Loads current chapter and resets scratch fields
 3. **SceneSegmenter**: Splits chapter into scenes
-4. **EntityRosterUpdate**: Detects characters and updates alias registry
-5. **MentionCounter**: Counts alias occurrences
-6. **AppearanceCounter**: Counts scenes per character
+4. **SceneChunker**: Selects batch of full scenes that fit within character limit
+5. **EntityRosterUpdate**: Detects characters and updates alias registry
+6. **MentionCounter**: Counts alias occurrences across scene chunk
 7. **InfluenceExtractor**: Extracts structured influence evidence
-8. **BookAggregator**: Merges chapter results into book totals
-9. **NextChapter**: Conditional routing (next chapter or finalize)
-10. **BookSynthesis**: Synthesizes evidence into dossiers
-11. **Ranker**: Assigns subjective influence ranks
+8. **ChapterSummarizer**: Incrementally summarizes chapter as scenes are processed
+9. **BookAggregator**: Merges chapter results into book totals
+10. **NextChapter**: Conditional routing (next chunk, next chapter, or finalize)
+11. **BookSynthesis**: Synthesizes evidence into dossiers using chapter summaries
+12. **Ranker**: Assigns subjective influence ranks
 
 ### State Structure
 
 The state maintains three layers:
-1. **Book-level aggregates**: Persist across chapters (mentions, appearances, influence)
-2. **Per-chapter scratch**: Reset each chapter (current chapter data)
+1. **Book-level aggregates**: Persist across chapters (mentions, influence, chapter summaries)
+2. **Per-chapter scratch**: Reset each chapter (current chapter data, scene chunks)
 3. **Indexing structures**: Character canon and alias resolution
 
 ### Influence Ranking
@@ -209,7 +214,7 @@ Influence ranking is **subjective** and based on:
 - Narrative gravity (scenes revolve around them)
 - Causal responsibility for major events
 
-**Note**: Mention and appearance counts are tracked but not the primary driver for ranking.
+**Note**: Mention counts are tracked but not the primary driver for ranking. The system processes chapters in scene chunks to ensure full coverage without truncation.
 
 ## Project Structure
 
@@ -221,8 +226,8 @@ Influence ranking is **subjective** and based on:
 │   ├── scene_segmenter.py
 │   ├── entity_roster_update.py
 │   ├── mention_counter.py
-│   ├── appearance_counter.py
 │   ├── influence_extractor.py
+│   ├── chapter_summarizer.py
 │   ├── book_aggregator.py
 │   ├── next_chapter.py
 │   ├── book_synthesis.py

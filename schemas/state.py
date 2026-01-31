@@ -79,7 +79,6 @@ class FinalCharacterResult(TypedDict):
     character_id: str
     name: str
     aliases: list[str]
-    appeared_scenes: int
     mentioned_count: int
     influence_summary: str  # book-level
     ranking_rationale: NotRequired[Optional[str]]  # optional
@@ -113,16 +112,16 @@ class BookState(TypedDict, total=False):
     
     # Book-level aggregates
     book_mentions: dict[str, int]  # char_id -> total mention hits
-    book_appearances: dict[str, int]  # char_id -> total scenes appeared
     book_influence: dict[str, InfluenceAccumulator]
-    chapter_summaries: NotRequired[list[dict]]  # optional debug trace
+    chapter_summaries: dict[str, str]  # chapter_id -> summary text
     
     # Per-chapter scratch (reset each chapter)
     current_chapter_id: str
     current_chapter_text: str
-    current_scenes: list[Scene]
+    current_scenes: list[Scene]  # All scenes in current chapter (from SceneSegmenter)
+    current_scene_chunk: list[Scene]  # Current batch of scenes being processed
+    processed_scene_ids: set[str]  # Scene IDs already processed in current chapter
     chapter_mentions_by_char: dict[str, int]
-    chapter_appearances_by_char: dict[str, int]
     chapter_influence_evidence: dict[str, InfluenceEvidence]
     
     # Synthesis + final outputs
