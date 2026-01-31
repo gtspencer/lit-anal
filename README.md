@@ -150,6 +150,32 @@ All nodes log their execution steps, making it easy to track progress and debug 
 
 ## Architecture
 
+### Graph Flow
+
+```mermaid
+graph TD
+    Start([Start]) --> Init[Init]
+    Init --> LoadChapter[LoadChapter]
+    LoadChapter --> SceneSegmenter[SceneSegmenter]
+    SceneSegmenter --> EntityRosterUpdate[EntityRosterUpdate]
+    EntityRosterUpdate --> MentionCounter[MentionCounter]
+    MentionCounter --> AppearanceCounter[AppearanceCounter]
+    AppearanceCounter --> InfluenceExtractor[InfluenceExtractor]
+    InfluenceExtractor --> BookAggregator[BookAggregator]
+    BookAggregator --> NextChapter[NextChapter]
+    NextChapter -->|next_chapter| LoadChapter
+    NextChapter -->|finalize| BookSynthesis[BookSynthesis]
+    BookSynthesis --> Ranker[Ranker]
+    Ranker --> End([End])
+    
+    style Start fill:#009919
+    style End fill:#b52d93
+    style NextChapter fill:#b5ae2d
+    style Init fill:#003399
+    style BookSynthesis fill:#812db5
+    style Ranker fill:#812db5
+```
+
 ### Graph Nodes
 
 1. **Init**: Validates input and initializes state
